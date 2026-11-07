@@ -1,0 +1,8 @@
+CREATE TABLE ledger_sharded (LIKE ledger_entry INCLUDING DEFAULTS) PARTITION BY HASH (account_id);
+CREATE TABLE ledger_s0 PARTITION OF ledger_sharded FOR VALUES WITH (MODULUS 4, REMAINDER 0);
+CREATE TABLE ledger_s1 PARTITION OF ledger_sharded FOR VALUES WITH (MODULUS 4, REMAINDER 1);
+CREATE TABLE ledger_s2 PARTITION OF ledger_sharded FOR VALUES WITH (MODULUS 4, REMAINDER 2);
+CREATE TABLE ledger_s3 PARTITION OF ledger_sharded FOR VALUES WITH (MODULUS 4, REMAINDER 3);
+INSERT INTO ledger_sharded SELECT * FROM ledger_entry;
+SELECT tableoid::regclass AS shard, count(*) FROM ledger_sharded GROUP BY 1 ORDER BY 1;
+EXPLAIN (COSTS OFF) SELECT * FROM ledger_sharded WHERE account_id=4321;

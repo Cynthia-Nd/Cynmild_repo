@@ -1,0 +1,53 @@
+psql:p4/nosql_demo.sql:2: NOTICE:  table "customer_profiles" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+INSERT 0 5000
+CREATE INDEX
+--- Q1 point read of one customer 360 document (no joins)
+     name      |          kyc           |                          accounts                           
+---------------+------------------------+-------------------------------------------------------------
+ "Customer 42" | {"status": "VERIFIED"} | [{"no": "0000000042", "type": "WAL", "balance": 792063.79}]
+(1 row)
+
+--- Q2 aggregation: volume by channel (equivalent of $unwind + $group)
+ channel |  n   |    total     
+---------+------+--------------
+ WEB     | 5833 | 583446409.48
+ USSD    | 5833 | 581855209.21
+ MOBILE  | 5832 | 581159586.77
+(3 rows)
+
+--- Q3 containment query on embedded array using GIN (like find({"devices.id":"dev-17"}))
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Aggregate (actual rows=1 loops=1)
+   ->  Bitmap Heap Scan on customer_profiles (actual rows=51 loops=1)
+         Recheck Cond: (doc @> '{"devices": [{"id": "dev-17"}]}'::jsonb)
+         Heap Blocks: exact=51
+         ->  Bitmap Index Scan on idx_prof_gin (actual rows=51 loops=1)
+               Index Cond: (doc @> '{"devices": [{"id": "dev-17"}]}'::jsonb)
+ Planning Time: 0.098 ms
+ Execution Time: 0.127 ms
+(8 rows)
+
+--- Graph model: customer-device edges, find customers sharing a device with customer 10 (2-hop)
+ linked_customer | via_device 
+-----------------+------------
+               5 | dev-71
+              20 | dev-141
+             155 | dev-71
+             160 | dev-141
+             305 | dev-71
+             310 | dev-71
+             310 | dev-141
+             320 | dev-141
+(8 rows)
+
+--- Most-shared devices (fraud/mule indicator)
+   dev   | customers 
+---------+-----------
+ dev-101 |        51
+ dev-107 |        51
+ dev-113 |        51
+(3 rows)
+

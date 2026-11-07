@@ -1,0 +1,39 @@
+erDiagram
+  BRANCH ||--o{ ACCOUNT : hosts
+  CUSTOMER ||--o{ ACCOUNT : owns
+  ACCOUNT_TYPE ||--o{ ACCOUNT : classifies
+  ACCOUNT ||--o{ LEDGER_ENTRY : posts
+  TRANSACTION ||--|{ LEDGER_ENTRY : "has 1..n lines"
+  TRANSACTION |o--o| TRANSACTION : reverses
+  ACCOUNT ||--o{ AUDIT_LOG : audited_by
+  CUSTOMER { int customer_id PK
+    string email UK
+    char bvn UK
+    string kyc_status }
+  ACCOUNT { int account_id PK
+    char account_number UK
+    int customer_id FK
+    int branch_id FK
+    string type_code FK
+    numeric balance
+    string status }
+  TRANSACTION { bigint txn_id PK
+    uuid txn_ref UK
+    string txn_type
+    numeric amount
+    string status
+    bigint reverses_txn FK }
+  LEDGER_ENTRY { bigint entry_id PK
+    bigint txn_id FK
+    int account_id FK
+    char direction
+    numeric amount
+    numeric balance_after }
+  BRANCH { int branch_id PK
+    string branch_name UK }
+  ACCOUNT_TYPE { string type_code PK
+    numeric min_balance }
+  AUDIT_LOG { bigint audit_id PK
+    string table_name
+    jsonb old_value
+    jsonb new_value }

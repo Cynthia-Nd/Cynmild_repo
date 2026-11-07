@@ -1,0 +1,52 @@
+UPDATE 2
+--- A. COMMIT: successful transfer 25,000
+BEGIN
+CALL
+COMMIT
+ account_number |  balance  
+----------------+-----------
+ 3000000001     |  75000.00
+ 3000000002     | 125000.00
+(2 rows)
+
+--- B. ROLLBACK: failed transfer (insufficient funds) leaves balances untouched
+BEGIN
+psql:p3/02_demo.sql:8: ERROR:  Insufficient funds (min balance 5000.00)
+CONTEXT:  PL/pgSQL function sp_transfer(character,character,numeric,text) line 12 at RAISE
+ROLLBACK
+ account_number |  balance  
+----------------+-----------
+ 3000000001     |  75000.00
+ 3000000002     | 125000.00
+(2 rows)
+
+--- C. Explicit ROLLBACK after partial work (atomicity)
+BEGIN
+UPDATE 1
+ inside_tx 
+-----------
+  70000.00
+(1 row)
+
+ROLLBACK
+ after_rollback 
+----------------
+       75000.00
+(1 row)
+
+--- D. Audit: ledger must balance (debits = credits) per transfer
+psql:p3/02_demo.sql:15: ERROR:  column reference "amount" is ambiguous
+LINE 1: SELECT t.txn_id, SUM(CASE direction WHEN 'D' THEN amount END...
+                                                          ^
+--- E. Audit trail written by trigger
+ record_id |       old_value        |       new_value        
+-----------+------------------------+------------------------
+         2 | {"balance": 100000.00} | {"balance": 125000.00}
+         1 | {"balance": 100000.00} | {"balance": 75000.00}
+(2 rows)
+
+ txn_id |  debits  | credits  
+--------+----------+----------
+ 600001 | 25000.00 | 25000.00
+(1 row)
+

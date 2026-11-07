@@ -1,0 +1,12 @@
+## Without locking: two sessions each read balance, compute new value in app, then write (lost update)
+Final balance (expected 50000 after two debits): 70000.00
+## With SELECT ... FOR UPDATE (pessimistic lock): second session waits, reads fresh value
+Final balance: 50000.00
+Second session blocked for 1.536150558 seconds
+## SERIALIZABLE: write-skew style conflict raises serialization failure
+S2: 225000.00
+S1: 225000.00
+S1: 
+S1: ERROR:  could not serialize access due to read/write dependencies among transactions
+S1: DETAIL:  Reason code: Canceled on identification as a pivot, during write.
+S1: HINT:  The transaction might succeed if retried.

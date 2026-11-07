@@ -1,0 +1,6 @@
+Replica in recovery (read-only standby)? t
+Primary pg_stat_replication (state | sync_state):
+streaming|async
+Row inserted on primary visible on replica (count): 1
+Write attempted on replica:
+ERROR:  cannot execute INSERT in a read-only transaction

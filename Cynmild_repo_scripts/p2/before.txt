@@ -1,0 +1,66 @@
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Merge (actual rows=7 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=4988 read=3432
+   ->  Sort (actual rows=2 loops=3)
+         Sort Key: posted_at DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=4988 read=3432
+         Worker 0:  Sort Method: quicksort  Memory: 25kB
+         Worker 1:  Sort Method: quicksort  Memory: 25kB
+         ->  Parallel Seq Scan on ledger_entry le (actual rows=2 loops=3)
+               Filter: ((account_id = 4321) AND (posted_at >= (now() - '90 days'::interval)))
+               Rows Removed by Filter: 299998
+               Buffers: shared hit=4916 read=3432
+ Planning:
+   Buffers: shared hit=99
+ Planning Time: 0.359 ms
+ Execution Time: 52.111 ms
+(18 rows)
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Limit (actual rows=10 loops=1)
+   ->  Sort (actual rows=10 loops=1)
+         Sort Key: (sum(a.balance)) DESC
+         Sort Method: top-N heapsort  Memory: 26kB
+         ->  HashAggregate (actual rows=508 loops=1)
+               Group Key: c.customer_id
+               Filter: (sum(a.balance) > '1500000'::numeric)
+               Batches: 1  Memory Usage: 7185kB
+               Rows Removed by Filter: 15492
+               ->  Hash Join (actual rows=24000 loops=1)
+                     Hash Cond: (a.customer_id = c.customer_id)
+                     ->  Seq Scan on account a (actual rows=24000 loops=1)
+                           Filter: ((status)::text = 'ACTIVE'::text)
+                           Rows Removed by Filter: 6000
+                     ->  Hash (actual rows=20000 loops=1)
+                           Buckets: 32768  Batches: 1  Memory Usage: 1242kB
+                           ->  Seq Scan on customer c (actual rows=20000 loops=1)
+ Planning Time: 0.880 ms
+ Execution Time: 47.356 ms
+(19 rows)
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather (actual rows=2410 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=7936
+   ->  Parallel Seq Scan on transaction (actual rows=803 loops=3)
+         Filter: (((status)::text = 'FAILED'::text) AND ((txn_type)::text = 'TRANSFER'::text) AND (created_at >= (now() - '30 days'::interval)))
+         Rows Removed by Filter: 199197
+         Buffers: shared hit=7936
+ Planning:
+   Buffers: shared hit=46 read=2 written=1
+ Planning Time: 0.758 ms
+ Execution Time: 64.626 ms
+(12 rows)
+ account_number | net_movement | entries 
+----------------+--------------+---------
+ 3000000003     |   -168106.33 |      40
+ 3000000004     |    219156.06 |      40
+ 3000000007     |     27678.33 |      40
+ 3000000008     |    195815.22 |      40
+ 3000000011     |   -354340.53 |      40
+(5 rows)

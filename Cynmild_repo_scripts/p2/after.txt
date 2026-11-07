@@ -1,0 +1,64 @@
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Sort (actual rows=7 loops=1)
+   Sort Key: posted_at DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=7 read=6 written=5
+   ->  Bitmap Heap Scan on ledger_entry le (actual rows=7 loops=1)
+         Recheck Cond: ((account_id = 4321) AND (posted_at >= (now() - '90 days'::interval)))
+         Heap Blocks: exact=7
+         Buffers: shared hit=4 read=6 written=5
+         ->  Bitmap Index Scan on idx_ledger_account_posted (actual rows=7 loops=1)
+               Index Cond: ((account_id = 4321) AND (posted_at >= (now() - '90 days'::interval)))
+               Buffers: shared read=3 written=3
+ Planning:
+   Buffers: shared hit=131 read=2 written=2
+ Planning Time: 0.396 ms
+ Execution Time: 0.129 ms
+(15 rows)
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Limit (actual rows=10 loops=1)
+   ->  Sort (actual rows=10 loops=1)
+         Sort Key: (sum(a.balance)) DESC
+         Sort Method: top-N heapsort  Memory: 26kB
+         ->  HashAggregate (actual rows=508 loops=1)
+               Group Key: c.customer_id
+               Filter: (sum(a.balance) > '1500000'::numeric)
+               Batches: 1  Memory Usage: 7185kB
+               Rows Removed by Filter: 15492
+               ->  Hash Join (actual rows=24000 loops=1)
+                     Hash Cond: (a.customer_id = c.customer_id)
+                     ->  Seq Scan on account a (actual rows=24000 loops=1)
+                           Filter: ((status)::text = 'ACTIVE'::text)
+                           Rows Removed by Filter: 6000
+                     ->  Hash (actual rows=20000 loops=1)
+                           Buckets: 32768  Batches: 1  Memory Usage: 1242kB
+                           ->  Seq Scan on customer c (actual rows=20000 loops=1)
+ Planning Time: 0.571 ms
+ Execution Time: 34.062 ms
+(19 rows)
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on transaction (actual rows=2410 loops=1)
+   Recheck Cond: ((created_at >= (now() - '30 days'::interval)) AND ((status)::text = 'FAILED'::text))
+   Filter: ((txn_type)::text = 'TRANSFER'::text)
+   Rows Removed by Filter: 2488
+   Heap Blocks: exact=3782
+   Buffers: shared hit=3784 read=16 written=16
+   ->  Bitmap Index Scan on idx_txn_failed_recent (actual rows=4898 loops=1)
+         Index Cond: (created_at >= (now() - '30 days'::interval))
+         Buffers: shared hit=3 read=15 written=15
+ Planning:
+   Buffers: shared hit=69 read=2 written=2
+ Planning Time: 0.330 ms
+ Execution Time: 8.842 ms
+(13 rows)
+ account_number | net_movement | entries 
+----------------+--------------+---------
+ 3000000003     |   -168106.33 |      40
+ 3000000004     |    219156.06 |      40
+ 3000000007     |     27678.33 |      40
+ 3000000008     |    195815.22 |      40
+ 3000000011     |   -354340.53 |      40
+(5 rows)
